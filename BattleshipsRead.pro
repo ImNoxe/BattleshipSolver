@@ -47,25 +47,38 @@ replace(_, _, [], []).
 replace(X, Y, [X | T], [Y | NT]) :- replace(X, Y, T, NT).
 replace(X, Y, [H | T], [H | NT]) :- H \= X, replace(X, Y, T, NT).
 
+countAllButShips(Element, [], 0).
 
-fillWater(OldGrid, [], [], OldGrid).
+countAllButShips(Element, [GridHead | GridTail], Counter) :-
+	Element = GridHead, !,
+	countAllButShips(Element, GridTail, Counter1),
+	Counter = Counter1 + 1.
 
-fillWater(OldGrid, [VerticalHead | VerticalTail], [GridHead | GridTail], NewGrid) :- 
+countAllButShips(Element, [GridHead | GridTail], Counter) :-
+	countAllButShips(Element, GridTail, Counter).
+
+fillWaterVertical([], [], OldGrid, OldGrid).
+
+fillWaterVertical([VerticalHead | VerticalTail], [GridHead | GridTail], OldGrid, NewGrid) :- 
 	VerticalHead == 0,
 	replace('?', '-', GridHead, Result),
 	append(OldGrid, [Result], ModifiedGrid),
-	fillWater(ModifiedGrid, VerticalTail, GridTail, NewGrid), !.
+	fillWaterVertical(VerticalTail, GridTail, ModifiedGrid, NewGrid), !.
 	
-fillWater(OldGrid, [VerticalHead | VerticalTail], [GridHead | GridTail], NewGrid) :-
+fillWaterVertical([VerticalHead | VerticalTail], [GridHead | GridTail], OldGrid, NewGrid) :-
 	not(VerticalHead == 0),
+	%countAllButShips('?', GridHead, Sum),
+	write("Sum: "), write(Sum), nl,
+	write("VerticalHead: "), write(VerticalHead), nl,
+	% Sum == VerticalHead ? Fill Water, Do code under.
 	append(OldGrid, [GridHead], ModifiedGrid),
-	fillWater(ModifiedGrid, VerticalTail, GridTail, NewGrid).
+	fillWaterVertical(VerticalTail, GridTail, ModifiedGrid, NewGrid).
 
 
 doSolve((battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(Grid))), 
 		(battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(NewGrid)))) :-
 
-	fillWater(OldGrid, Vertical, Grid, NewGrid),
+	fillWaterVertical(Vertical, Grid, OldGrid, NewGrid),
 	
 	write('Size: '), write(Size), nl,
 	write('Boats: '), write(Boats), nl,
