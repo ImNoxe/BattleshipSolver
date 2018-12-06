@@ -4,14 +4,6 @@ inputFile('./battleships_unsolved.txt').
 
 % Defining rules
 
-shipPiece('A').
-shipPiece('V').
-shipPiece('<').
-shipPiece('>').
-shipPiece('+').
-shipPiece('*').
-shipPiece('S').
-
 legalHorizontalCombination('A', '-').
 legalHorizontalCombination('-', 'A').
 legalHorizontalCombination('-', '*').
@@ -47,49 +39,58 @@ replace(_, _, [], []).
 replace(X, Y, [X | T], [Y | NT]) :- replace(X, Y, T, NT).
 replace(X, Y, [H | T], [H | NT]) :- H \= X, replace(X, Y, T, NT).
 
-countAllButShips(Element, [], 0).
 
-countAllButShips(Element, [GridHead | GridTail], Counter) :-
-	Element = GridHead, !,
-	countAllButShips(Element, GridTail, Counter1),
-	Counter = Counter1 + 1.
+countShips([], Row, 0).
 
-countAllButShips(Element, [GridHead | GridTail], Counter) :-
-	countAllButShips(Element, GridTail, Counter).
+countShips([Element | Tail], Row, Counter) :-
+	member(Element, Row),
+	countShips(Tail, Row, Counter1),
+	Counter is Counter1 + 1.
+	
+countShips([Element | Tail], Row, Counter) :-
+	countShips(Tail, Row, Counter).
+
+fixBoard([], TempBoard, TempBoard).
+
+fixBoard([Head | Tail], TempBoard, FixedBoard) :-
+	replace('?', "?", Head, Result),
+	append(TempBoard, [Result], ModifiedGrid),
+	fixBoard(Tail, ModifiedGrid, FixedBoard).
+
 
 fillWaterVertical([], [], OldGrid, OldGrid).
 
 fillWaterVertical([VerticalHead | VerticalTail], [GridHead | GridTail], OldGrid, NewGrid) :- 
 	VerticalHead == 0,
-	replace('?', '-', GridHead, Result),
+	replace("?", "-", GridHead, Result),
 	append(OldGrid, [Result], ModifiedGrid),
 	fillWaterVertical(VerticalTail, GridTail, ModifiedGrid, NewGrid), !.
 	
 fillWaterVertical([VerticalHead | VerticalTail], [GridHead | GridTail], OldGrid, NewGrid) :-
+	countShips(["A", "V", "<", ">", "+", "*", "S"], GridHead, Sum),
+	VerticalHead == Sum,
+	replace("?", "-", GridHead, Result),
+	append(OldGrid, [Result], ModifiedGrid),
+	fillWaterVertical(VerticalTail, GridTail, ModifiedGrid, NewGrid).
+
+fillWaterVertical([VerticalHead | VerticalTail], [GridHead | GridTail], OldGrid, NewGrid) :-
 	not(VerticalHead == 0),
-	%countAllButShips('?', GridHead, Sum),
-	write("Sum: "), write(Sum), nl,
-	write("VerticalHead: "), write(VerticalHead), nl,
-	% Sum == VerticalHead ? Fill Water, Do code under.
 	append(OldGrid, [GridHead], ModifiedGrid),
 	fillWaterVertical(VerticalTail, GridTail, ModifiedGrid, NewGrid).
+	
 
 
 doSolve((battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(Grid))), 
 		(battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(NewGrid)))) :-
-
-	fillWaterVertical(Vertical, Grid, OldGrid, NewGrid),
+		fixBoard(Grid, TempBoard, FixedBoard),
+		fillWaterVertical(Vertical, FixedBoard, OldGrid, NewGrid),
 	
-	write('Size: '), write(Size), nl,
-	write('Boats: '), write(Boats), nl,
-	write('Horizontal: '), write(Horizontal), nl,
-	write('Vertical: '), write(Vertical), nl,
-	write('Solution: '), write(NewGrid), nl, !.
-	%member('?', G).
+		write('Size: '), write(Size), nl,
+		write('Boats: '), write(Boats), nl,
+		write('Horizontal: '), write(Horizontal), nl,
+		write('Vertical: '), write(Vertical), nl,
+		write('Solution: '), write(NewGrid), nl, !.
 
-
-%member(Element, [Element | _]) :- !.	
-%member(Element, [_ | List]) :- member(Element, List).
 
 
 
