@@ -3,42 +3,36 @@ inputFile('./battleships_unsolved.txt').
 
 
 % Defining rules
+/*waterPlacementRule("-", "*").
+waterPlacementRule("*", "-").
 
-legalHorizontalCombination('A', '-').
-legalHorizontalCombination('-', 'A').
-legalHorizontalCombination('-', '*').
-legalHorizontalCombination('*', '-').
-legalHorizontalCombination('V', '-').
-legalHorizontalCombination('-', 'V').
-legalHorizontalCombination('-', '<').
-legalHorizontalCombination('>', '-').
-legalHorizontalCombination('<', '>').
-legalHorizontalCombination('<', '+').
-legalHorizontalCombination('+', '>').
-legalHorizontalCombination('-', '+').
-legalHorizontalCombination('+', '-').
-legalHorizontalCombination('+', '+').
-
-legalVerticalCombination('-', 'A').
-legalVerticalCombination('A', '+').
-legalVerticalCombination('A', 'V').
-legalVerticalCombination('V', '-').
-legalVerticalCombination('+', 'V').
-legalVerticalCombination('-', '*').
-legalVerticalCombination('*', '-').
-legalVerticalCombination('<', '-').
-legalVerticalCombination('-', '>').
-legalVerticalCombination('-', '<').
-legalVerticalCombination('>', '-').
-legalVerticalCombination('-', '+').
-legalVerticalCombination('+', '-').
-legalVerticalCombination('+', '+').
+waterPlacementRule("-", "A").
+waterPlacementRule("A", "S").
+waterPlacementRule("A", "+").
+waterPlacementRule("+", "V").
+waterPlacementRule("S", "V").
+waterPlacementRule("V", "-").
+waterPlacementRule("A", "V").
 
 
-% Replace Character in List.
-replace(_, _, [], []).
-replace(X, Y, [X | T], [Y | NT]) :- replace(X, Y, T, NT).
-replace(X, Y, [H | T], [H | NT]) :- H \= X, replace(X, Y, T, NT).
+waterPlacementRule("-", "<").
+waterPlacementRule("<", "S").
+waterPlacementRule("<", "+").
+waterPlacementRule("+", ">").
+waterPlacementRule("S", ">").
+waterPlacementRule(">", "-").
+waterPlacementRule("<", ">").*/
+
+
+% Replace All Equal Characters in List.
+replaceList(_, _, [], []).
+replaceList(X, Y, [X | T], [Y | NT]) :- replaceList(X, Y, T, NT).
+replaceList(X, Y, [H | T], [H | NT]) :- H \= X, replaceList(X, Y, T, NT).
+
+% Replace Single Character by Index in List.
+replaceByIndex([_|T], 0, X, [X|T]).
+replaceByIndex([H|T], I, X, [H|R]):- I > -1, NI is I-1, replaceByIndex(T, NI, X, R), !.
+replaceByIndex(L, _, _, L).
 
 % Rotate List.
 transpose([], []).
@@ -53,6 +47,13 @@ transpose([_|Rs], Ms, [Ts|Tss]) :-
 lists_firsts_rests([], [], []).
 lists_firsts_rests([[F|Os]|Rest], [F|Fs], [Os|Oss]) :-
         lists_firsts_rests(Rest, Fs, Oss).
+		
+
+% List equals list.
+listEquality([], []).
+listEquality([H1|R1], [H2|R2]):-
+    H1 = H2,
+    listEquality(R1, R2).
 
 % Count Number of Ship Pieces in Line.
 countShips([], _, 0).
@@ -67,9 +68,48 @@ countShips([_ | Tail], Row, Counter) :-
 % Replace 'Questionmarks' with "Questionmarks".
 fixGrid([], TempBoard, TempBoard).
 fixGrid([Head | Tail], TempBoard, FixedBoard) :-
-	replace('?', "?", Head, Result),
+	replaceList('?', "?", Head, Result),
 	append(TempBoard, [Result], ModifiedGrid),
 	fixGrid(Tail, ModifiedGrid, FixedBoard).
+	
+	
+	
+fillWaterAroundBoat([], NewGrid).
+	
+fillWaterAroundBoat([First, Second | Tail], NewGrid) :-
+	getListOfFour(First, Second, FirstList, SecondList),
+	append(SecondList, Tail, NewTail),
+	append(NewGrid, FirstList, TempGrid),
+	fillWaterAroundBoat(NewTail, TempGrid).
+
+getListOfFour([], [], FirstList, SecondList).
+
+getListOfFour([First, Second | Tail], [First2, Second2 | Tail2], FirstList, SecondList) :-
+	append([First, Second], [First2, Second2], ListOfFour),
+	
+	%Checks here
+	
+	appendListOfFourToNewGrid(ListOfFour, FirstList, SecondList),
+	
+	append([Second], Tail, NewTail),
+	append([Second2], Tail2, NewTail2),
+	getListOfFour(NewTail, NewTail2, FirstList, SecondList).
+
+appendListOfFourToNewGrid([], FirstList, SecondList).
+	
+appendListOfFourToNewGrid([First, Second, Third, Fourth | _], [], []) :-
+	append(First, Second, FirstList),
+	append(Third, Fourth, SecondList),
+	appendListOfFourToNewGrid([], FirstList, SecondList).
+
+	
+appendListOfFourToNewGrid([First, Second, Third, Fourth | _], FirstList, SecondList) :-
+	append(FirstList, Second, NewFirstList),
+	append(SecondList, Fourth, NewSecondList),
+	appendListOfFourToNewGrid([], NewFirstList, NewSecondList).
+	
+
+	
 
 % Fill Water in Lines.
 fillWater([], [], OldGrid, NewGrid) :-
@@ -77,14 +117,14 @@ fillWater([], [], OldGrid, NewGrid) :-
 
 fillWater([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :- 
 	Head == 0,
-	replace("?", "-", GridHead, Result),
+	replaceList("?", "-", GridHead, Result),
 	append(OldGrid, [Result], ModifiedGrid),
 	fillWater(Tail, GridTail, ModifiedGrid, NewGrid), !.
 	
 fillWater([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :-
 	countShips(["A", "V", "<", ">", "+", "*", "S"], GridHead, Sum),
 	Head == Sum,
-	replace("?", "-", GridHead, Result),
+	replaceList("?", "-", GridHead, Result),
 	append(OldGrid, [Result], ModifiedGrid),
 	fillWater(Tail, GridTail, ModifiedGrid, NewGrid).
 
