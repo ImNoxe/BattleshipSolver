@@ -74,42 +74,49 @@ fixGrid([Head | Tail], TempBoard, FixedBoard) :-
 	
 	
 	
-fillWaterAroundBoat([], NewGrid).
+fillWaterAroundBoat([], NewGrid, NewGrid, []).
+	%write(Result).
 	
-fillWaterAroundBoat([First, Second | Tail], NewGrid) :-
-	getListOfFour(First, Second, FirstList, SecondList),
-	append(SecondList, Tail, NewTail),
-	append(NewGrid, FirstList, TempGrid),
-	fillWaterAroundBoat(NewTail, TempGrid).
+fillWaterAroundBoat([First], NewGrid, Result, FinalList) :-
+	append(NewGrid, [FinalList], TempGrid),
+	fillWaterAroundBoat([], TempGrid, Result, []).
 
-getListOfFour([], [], FirstList, SecondList).
+	
+fillWaterAroundBoat([First, Second | Tail], NewGrid, Result, FinalList) :-
+	getListOfFour(First, Second, FirstList, SecondList, FinishedFirstList, FinishedSecondList),
+	append([Second], Tail, NewTail),
+	append(NewGrid, [FinishedFirstList], TempGrid),
+	fillWaterAroundBoat(NewTail, TempGrid, Result, FinishedSecondList).
+	
 
-getListOfFour([First, Second | Tail], [First2, Second2 | Tail2], FirstList, SecondList) :-
+
+getListOfFour([], [], FirstList, SecondList, FirstList, SecondList).
+
+getListOfFour([First], [First2], FirstList, SecondList, FirstList, SecondList).
+
+getListOfFour([First, Second | Tail], [First2, Second2 | Tail2], FirstList, SecondList, FinishedFirstList, FinishedSecondList) :-
 	append([First, Second], [First2, Second2], ListOfFour),
 	
 	%Checks here
 	
-	appendListOfFourToNewGrid(ListOfFour, FirstList, SecondList),
+	appendListOfFourToNewGrid(ListOfFour, FirstList, SecondList, FirstList2, SecondList2),
 	
 	append([Second], Tail, NewTail),
 	append([Second2], Tail2, NewTail2),
-	getListOfFour(NewTail, NewTail2, FirstList, SecondList).
+	getListOfFour(NewTail, NewTail2, FirstList2, SecondList2, FinishedFirstList, FinishedSecondList).
 
-appendListOfFourToNewGrid([], FirstList, SecondList).
+appendListOfFourToNewGrid([], FirstList, SecondList, FirstList, SecondList).
 	
-appendListOfFourToNewGrid([First, Second, Third, Fourth | _], [], []) :-
-	append(First, Second, FirstList),
-	append(Third, Fourth, SecondList),
-	appendListOfFourToNewGrid([], FirstList, SecondList).
+appendListOfFourToNewGrid([First, Second, Third, Fourth], [], [], FirstList2, SecondList2) :-
+	append([First], [Second], UpperList),
+	append([Third], [Fourth], BottomList),
+	appendListOfFourToNewGrid([], UpperList, BottomList, FirstList2, SecondList2).
 
-	
-appendListOfFourToNewGrid([First, Second, Third, Fourth | _], FirstList, SecondList) :-
-	append(FirstList, Second, NewFirstList),
-	append(SecondList, Fourth, NewSecondList),
-	appendListOfFourToNewGrid([], NewFirstList, NewSecondList).
-	
+appendListOfFourToNewGrid([First, Second, Third, Fourth], FirstList, SecondList, FirstList2, SecondList2) :-
+	append(FirstList, [Second], NewFirstList),
+	append(SecondList, [Fourth], NewSecondList),
+	appendListOfFourToNewGrid([], NewFirstList, NewSecondList, FirstList2, SecondList2).
 
-	
 
 % Fill Water in Lines.
 fillWater([], [], OldGrid, NewGrid) :-
@@ -137,17 +144,17 @@ fillWater([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :-
 
 % Solve Board
 doSolve((battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(Grid))), 
-		(battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(HorizontallyFilledGrid)))) :-
+		(battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(Return)))) :-
 		fixGrid(Grid, _, FixedGrid),
 		fillWater(Vertical, FixedGrid, _, VerticallyFilledGrid),
 		fillWater(Horizontal, VerticallyFilledGrid, _, HorizontallyFilledGrid),
-		
+		fillWaterAroundBoat(HorizontallyFilledGrid, [], Return, []),
 	
 		write('Size: '), write(Size), nl,
 		write('Boats: '), write(Boats), nl,
 		write('Horizontal: '), write(Horizontal), nl,
 		write('Vertical: '), write(Vertical), nl,
-		write('Solution: '), write(HorizontallyFilledGrid), nl, !.
+		write('Solution: '), write(Return), nl, !.
 
 
 
