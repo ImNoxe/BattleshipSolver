@@ -3,25 +3,30 @@ inputFile('./battleships_unsolved.txt').
 
 
 % Defining rules
-/*waterPlacementRule("-", "*").
-waterPlacementRule("*", "-").
+waterPlacementRule("*", "-", "-", "-").
+waterPlacementRule("-", "*", "-", "-").
+waterPlacementRule("-", "-", "*", "-").
+waterPlacementRule("-", "-", "-", "*").
 
-waterPlacementRule("-", "A").
-waterPlacementRule("A", "S").
-waterPlacementRule("A", "+").
-waterPlacementRule("+", "V").
-waterPlacementRule("S", "V").
-waterPlacementRule("V", "-").
-waterPlacementRule("A", "V").
+waterPlacementRule("A", "-", "S", "-").
+waterPlacementRule("-", "A", "-", "S").
+waterPlacementRule("-", "-", "A", "-").
+waterPlacementRule("-", "-", "-", "A").
 
+waterPlacementRule("V", "-", "-", "-").
+waterPlacementRule("-", "V", "-", "-").
+waterPlacementRule("S", "-", "V", "-").
+waterPlacementRule("-", "S", "-", "V").
 
-waterPlacementRule("-", "<").
-waterPlacementRule("<", "S").
-waterPlacementRule("<", "+").
-waterPlacementRule("+", ">").
-waterPlacementRule("S", ">").
-waterPlacementRule(">", "-").
-waterPlacementRule("<", ">").*/
+waterPlacementRule("<", "S", "-", "-").
+waterPlacementRule("-", "<", "-", "-").
+waterPlacementRule("-", "-", "<", "S").
+waterPlacementRule("-", "-", "-", "<").
+
+waterPlacementRule(">", "-", "-", "-").
+waterPlacementRule("S", ">", "-", "-").
+waterPlacementRule("-", "-", ">", "-").
+waterPlacementRule("-", "-", "S", ">").
 
 
 % Replace All Equal Characters in List.
@@ -34,6 +39,12 @@ replaceByIndex([_|T], 0, X, [X|T]).
 replaceByIndex([H|T], I, X, [H|R]):- I > -1, NI is I-1, replaceByIndex(T, NI, X, R), !.
 replaceByIndex(L, _, _, L).
 
+% Get by Index
+getByIndex([X], 0, X).
+getByIndex([H|_], 0, H).
+getByIndex([_|T], I, E):- 
+	NewIndex is I-1, getByIndex(T, NewIndex, E).
+	
 % Rotate List.
 transpose([], []).
 transpose([F|Fs], Ts) :-
@@ -56,14 +67,20 @@ listEquality([H1|R1], [H2|R2]):-
     listEquality(R1, R2).
 
 % Count Number of Ship Pieces in Line.
-countShips([], _, 0).
-countShips([Element | Tail], Row, Counter) :-
-	member(Element, Row),
-	countShips(Tail, Row, Counter1),
-	Counter is Counter1 + 1.
+count(_,  [], 0).
+count(X, [X|T], N):- !, 
+	count(X,T,N1),
+	N is N1 + 1.
+	
+count(X, [_|T],N):-
+	count(X,T,N).
 
-countShips([_ | Tail], Row, Counter) :-
-	countShips(Tail, Row, Counter).
+countElements([], _, Temp, Temp).
+countElements([Element | Tail], Row, Temp, N):-
+	count(Element, Row, NewTemp),
+	NewestTemp is Temp + NewTemp,
+	countElements(Tail, Row, NewestTemp, N).
+
 
 % Replace 'Questionmarks' with "Questionmarks".
 fixGrid([], TempBoard, TempBoard).
@@ -71,52 +88,103 @@ fixGrid([Head | Tail], TempBoard, FixedBoard) :-
 	replaceList('?', "?", Head, Result),
 	append(TempBoard, [Result], ModifiedGrid),
 	fixGrid(Tail, ModifiedGrid, FixedBoard).
-	
-	
-	
+
+% Fill Water Around Boat Pieces
 fillWaterAroundBoat([], NewGrid, NewGrid, []).
-	%write(Result).
-	
-fillWaterAroundBoat([First], NewGrid, Result, FinalList) :-
+fillWaterAroundBoat([_], NewGrid, Result, FinalList) :-
 	append(NewGrid, [FinalList], TempGrid),
 	fillWaterAroundBoat([], TempGrid, Result, []).
-
 	
-fillWaterAroundBoat([First, Second | Tail], NewGrid, Result, FinalList) :-
-	getListOfFour(First, Second, FirstList, SecondList, FinishedFirstList, FinishedSecondList),
-	append([Second], Tail, NewTail),
+fillWaterAroundBoat([First, Second | Tail], NewGrid, Result, _) :-
+	getListOfFour(First, Second, _, _, FinishedFirstList, FinishedSecondList),
+	append([FinishedSecondList], Tail, NewTail),
 	append(NewGrid, [FinishedFirstList], TempGrid),
 	fillWaterAroundBoat(NewTail, TempGrid, Result, FinishedSecondList).
 	
 
-
 getListOfFour([], [], FirstList, SecondList, FirstList, SecondList).
-
-getListOfFour([First], [First2], FirstList, SecondList, FirstList, SecondList).
-
-getListOfFour([First, Second | Tail], [First2, Second2 | Tail2], FirstList, SecondList, FinishedFirstList, FinishedSecondList) :-
+getListOfFour([First], [First2], FirstListTemp, SecondListTemp, FirstList, SecondList):-
+	append(FirstListTemp, [First], NewFirstList),
+	append(SecondListTemp, [First2], NewSecondList),
+	getListOfFour([],[], NewFirstList, NewSecondList, FirstList, SecondList).
+	
+getListOfFour([First, Second | Tail1], [First2, Second2 | Tail2], FirstList, SecondList, FinishedFirstList, FinishedSecondList) :-
 	append([First, Second], [First2, Second2], ListOfFour),
+	fillWaterByRule(ListOfFour, _, Result),
+	appendListOfFourToNewGrid(Result, FirstList, SecondList, FirstList2, SecondList2),
+	getByIndex(Result, 1, E1),
+	append([E1], Tail1, NewTail1),
+	getByIndex(Result, 3, E2),
+	append([E2], Tail2, NewTail2),
+	getListOfFour(NewTail1, NewTail2, FirstList2, SecondList2, FinishedFirstList, FinishedSecondList).
 	
-	%Checks here
 	
-	appendListOfFourToNewGrid(ListOfFour, FirstList, SecondList, FirstList2, SecondList2),
-	
-	append([Second], Tail, NewTail),
-	append([Second2], Tail2, NewTail2),
-	getListOfFour(NewTail, NewTail2, FirstList2, SecondList2, FinishedFirstList, FinishedSecondList).
-
 appendListOfFourToNewGrid([], FirstList, SecondList, FirstList, SecondList).
-	
-appendListOfFourToNewGrid([First, Second, Third, Fourth], [], [], FirstList2, SecondList2) :-
-	append([First], [Second], UpperList),
-	append([Third], [Fourth], BottomList),
-	appendListOfFourToNewGrid([], UpperList, BottomList, FirstList2, SecondList2).
+appendListOfFourToNewGrid([First, _, Third, _], [], [], FirstList2, SecondList2) :-
+	appendListOfFourToNewGrid([], [First], [Third], FirstList2, SecondList2).
 
-appendListOfFourToNewGrid([First, Second, Third, Fourth], FirstList, SecondList, FirstList2, SecondList2) :-
-	append(FirstList, [Second], NewFirstList),
-	append(SecondList, [Fourth], NewSecondList),
+appendListOfFourToNewGrid([First, _, Third, _], FirstList, SecondList, FirstList2, SecondList2) :-
+	append(FirstList, [First], NewFirstList),
+	append(SecondList, [Third], NewSecondList),
 	appendListOfFourToNewGrid([], NewFirstList, NewSecondList, FirstList2, SecondList2).
 
+
+fillWaterByRule([], Result, Result).
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(First, ["A", "V", "<", ">", "*"]),
+	waterPlacementRule(First, X, Y, Z),
+	replaceByIndex([First, Second, Third, Fourth], 1, X, L),
+	replaceByIndex(L, 2, Y, L2),
+	replaceByIndex(L2, 3, Z, L3),
+	fillWaterByRule([], L3, Result).
+
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(Second, ["A", "V", "<", ">", "*"]),
+	waterPlacementRule(X, Second, Y, Z),
+	replaceByIndex([First, Second, Third, Fourth], 0, X, L),
+	replaceByIndex(L, 2, Y, L2),
+	replaceByIndex(L2, 3, Z, L3),
+	fillWaterByRule([], L3, Result).
+	
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(Third, ["A", "V", "<", ">", "*"]),
+	waterPlacementRule(X, Y, Third, Z),
+	replaceByIndex([First, Second, Third, Fourth], 0, X, L),
+	replaceByIndex(L, 1, Y, L2),
+	replaceByIndex(L2, 3, Z, L3),
+	fillWaterByRule([], L3, Result).
+	
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(Fourth, ["A", "V", "<", ">", "*"]),
+	waterPlacementRule(X, Y, Z, Fourth),
+	replaceByIndex([First, Second, Third, Fourth], 0, X, L),
+	replaceByIndex(L, 1, Y, L2),
+	replaceByIndex(L2, 2, Z, L3),
+	fillWaterByRule([], L3, Result).
+	
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(First, ["S", "+"]),
+	replaceByIndex([First, Second, Third, Fourth], 3, "-", NewList),
+	fillWaterByRule([], NewList, Result).
+	
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(Second, ["S", "+"]),
+	replaceByIndex([First, Second, Third, Fourth], 2, "-", NewList),
+	fillWaterByRule([], NewList, Result).
+	
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(Third, ["S", "+"]),
+	replaceByIndex([First, Second, Third, Fourth], 1, "-", NewList),
+	fillWaterByRule([], NewList, Result).
+	
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	member(Fourth, ["S", "+"]),
+	replaceByIndex([First, Second, Third, Fourth], 0, "-", NewList),
+	fillWaterByRule([], NewList, Result).
+	
+fillWaterByRule([First, Second, Third, Fourth], _, Result):-
+	fillWaterByRule([], [First, Second, Third, Fourth], Result).
+	
 
 % Fill Water in Lines.
 fillWater([], [], OldGrid, NewGrid) :-
@@ -129,7 +197,7 @@ fillWater([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :-
 	fillWater(Tail, GridTail, ModifiedGrid, NewGrid), !.
 	
 fillWater([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :-
-	countShips(["A", "V", "<", ">", "+", "*", "S"], GridHead, Sum),
+	countElements(["A", "V", "<", ">", "+", "*", "S"], GridHead, 0, Sum),
 	Head == Sum,
 	replaceList("?", "-", GridHead, Result),
 	append(OldGrid, [Result], ModifiedGrid),
@@ -140,25 +208,60 @@ fillWater([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :-
 	append(OldGrid, [GridHead], ModifiedGrid),
 	fillWater(Tail, GridTail, ModifiedGrid, NewGrid).
 	
+fillShip([], [], OldGrid, NewGrid) :-
+	transpose(OldGrid, NewGrid).
 
+fillShip([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :-
+	countElements(["A", "V", "<", ">", "+", "*", "S", "?"], GridHead, 0, Sum),
+	Head == Sum,
+	replaceList("?", "S", GridHead, Result),
+	append(OldGrid, [Result], ModifiedGrid),
+	fillShip(Tail, GridTail, ModifiedGrid, NewGrid).
+	
+fillShip([Head | Tail], [GridHead | GridTail], OldGrid, NewGrid) :-
+	not(Head == 0),
+	append(OldGrid, [GridHead], ModifiedGrid),
+	fillShip(Tail, GridTail, ModifiedGrid, NewGrid).
+	
 
+replaceShipPartToS([], TempBoard, TempBoard).
+replaceShipPartToS([Head | Tail], TempBoard, FixedBoard):-
+	replaceList("<", "S", Head, L1),
+	replaceList(">", "S", L1, L2),
+	replaceList("A", "S", L2, L3),
+	replaceList("V", "S", L3, L4),
+	replaceList("+", "S", L4, L5),
+	replaceList("*", "S", L5, L6),
+	append(TempBoard, [L6], ModifiedGrid),
+	replaceShipPartToS(Tail, ModifiedGrid, FixedBoard).
+	
+	
+isBoardSolved([]).
+isBoardSolved([Head | Tail]) :-
+	not(member("?", Head)),
+	isBoardSolved(Tail).
+	
+	
+solveBoard(_, [], _, _, Grid, Grid).
+solveBoard(Size, Boats, Horizontal, Vertical, Grid, FinishedBoard) :-
+	not(isBoardSolved(Grid)), !,
+	fillWater(Vertical, Grid, _, VerticallyFilledGrid),
+	fillWater(Horizontal, VerticallyFilledGrid, _, HorizontallyFilledGrid),
+	fillShip(Vertical, HorizontallyFilledGrid, _, VerticallyFilledGrid2),
+	fillShip(Horizontal, VerticallyFilledGrid2, _, HorizontallyFilledGrid2),
+	fillWaterAroundBoat(HorizontallyFilledGrid2, [], Return2, []),
+	solveBoard(Size, Boats, Horizontal, Vertical, Return2, FinishedBoard).
+
+solveBoard(Size, _, Horizontal, Vertical, Grid, FinishedBoard) :-
+	isBoardSolved(Grid), !,
+	solveBoard(Size, [], Horizontal, Vertical, Grid, FinishedBoard).
+	
 % Solve Board
 doSolve((battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(Grid))), 
-		(battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(Return)))) :-
+		(battleships(size(Size), boats(Boats), horizontal(Horizontal), vertical(Vertical), grid(FinishGrid)))) :-
 		fixGrid(Grid, _, FixedGrid),
-		fillWater(Vertical, FixedGrid, _, VerticallyFilledGrid),
-		fillWater(Horizontal, VerticallyFilledGrid, _, HorizontallyFilledGrid),
-		fillWaterAroundBoat(HorizontallyFilledGrid, [], Return, []),
-	
-		write('Size: '), write(Size), nl,
-		write('Boats: '), write(Boats), nl,
-		write('Horizontal: '), write(Horizontal), nl,
-		write('Vertical: '), write(Vertical), nl,
-		write('Solution: '), write(Return), nl, !.
-
-
-
-
+		solveBoard(Size, Boats, Horizontal, Vertical, FixedGrid, FinishedBoard),
+		replaceShipPartToS(FinishedBoard, [], FinishGrid), !.
 
 
 /********************* writing the result */
